@@ -26,7 +26,7 @@ class Track:
     '''Track class with state, covariance, id, score'''
     def __init__(self, meas, id):
         print('creating track no.', id)
-        Rot = meas.sensor.sens_to_veh[0:3, 0:3] # rotation matrix from sensor to vehicle coordinates
+        #Rot = meas.sensor.sens_to_veh[0:3, 0:3] # rotation matrix from sensor to vehicle coordinates
         
         ############
         # TODO Step 2: initialization:
@@ -35,22 +35,52 @@ class Track:
         # - initialize track state and track score with appropriate values
         ############
       
-        x = meas.sensor.sens_to_veh * np.append(meas.z, [[1]], axis=0)
-        x = x[:-1, :]
-        x = np.append(x.A, [[0], [0], [0]], axis =0)
-        self.x = np.matrix(x)
+        #x = meas.sensor.sens_to_veh * np.append(meas.z, [[1]], axis=0)
+        #x = x[:-1, :]
+        #x = np.append(x.A, [[0], [0], [0]], axis =0)
+        #self.x = np.matrix(x)
         
-        self.P = np.matrix([[9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 6.4e-03, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+01]])
+        #self.P = np.matrix([[9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
+                        #[0.0e+00, 9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
+                        #[0.0e+00, 0.0e+00, 6.4e-03, 0.0e+00, 0.0e+00, 0.0e+00],
+                        #[0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00, 0.0e+00],
+                        #[0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00],
+                        #[0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+01]])
         
-        self.P[3,3],self.P[4,4],self.P[5,5] = params.sigma_p44, params.sigma_p55,params.sigma_p66
+        #self.P[3,3],self.P[4,4],self.P[5,5] = params.sigma_p44, params.sigma_p55,params.sigma_p66
+        #self.state =  'initialized'
+        #self.score = 1./params.window
+        
+        
+        # transform measurement to vehicle coordinates
+        pos_sens = np.ones((4, 1)) # homogeneous coordinates
+        pos_sens[0:3] = meas.z[0:3] 
+        pos_veh = meas.sensor.sens_to_veh*pos_sens
+        
+        # save initial state from measurement
+        self.x = np.matrix(np.zeros((6,1)))
+        self.x[0:3] = pos_veh[0:3]
+        
+        # set up position estimation error covariance
+        Rot = meas.sensor.sens_to_veh[0:3, 0:3]
+        P_pos = Rot * meas.R * np.transpose(Rot)
+        
+        # set up velocity estimation error covariance
+        sigma_p44 = params.sigma_p44 # initial setting for estimation error covariance P entry for vx
+        sigma_p55 = params.sigma_p55 # initial setting for estimation error covariance P entry for vy
+        sigma_p66 = params.sigma_p66 # initial setting for estimation error covariance P entry for vz
+        P_vel = np.matrix([[sigma_p44**2, 0, 0],
+                        [0, sigma_p55**2, 0],
+                        [0, 0, sigma_p66**2]])
+        
+        # overall covariance initialization
+        self.P = np.matrix(np.zeros((6, 6)))
+        self.P[0:3, 0:3] = P_pos
+        self.P[3:6, 3:6] = P_vel
+        
+        
         self.state =  'initialized'
         self.score = 1./params.window
-        
         ############
         # END student code
         ############ 
